@@ -1,0 +1,7 @@
+1. book: Active portfolio management by Grinohld and Kahn
+
+	First 3 chapters
+
+
+2. 1. downloading candlestick data 2.plotting it along with specified metrics
+jupyter notebook
