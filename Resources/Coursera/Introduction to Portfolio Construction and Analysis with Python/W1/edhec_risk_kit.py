@@ -27,7 +27,7 @@ def get_ffme_returns():
         "data/Portfolios_Formed_on_ME_monthly_EW.csv",
         header=0,
         index_col=0,
-        na_values=-99.99,
+        na_values=-99.99,  # type: ignore
     )
     returns = me_m[["Lo 10", "Hi 10"]]
     returns.columns = ["SmallCap", "LargeCap"]
@@ -42,8 +42,18 @@ def get_hfi_returns():
         "data/edhec-hedgefundindices.csv", header=0, index_col=0, parse_dates=True
     )
     hfi = hfi / 100
-    hfi.index = hfi.index.to_period("M")
+    hfi.index = hfi.index.to_period("M")  # type: ignore
     return hfi
+
+
+def get_ind_returns():
+    ind = (
+        pd.read_csv("data/ind30_m_vw_rets.csv", header=0, index_col=0, parse_dates=True)
+        / 100
+    )
+    ind.index = pd.to_datetime(ind.index, format="%Y%m").to_period("M")
+    ind.columns = ind.columns.str.strip()
+    return ind
 
 
 def semideviation(r):
@@ -125,3 +135,45 @@ def cvar_historic(r, level=5):
         return -(r[is_beyond].mean())
     else:
         raise TypeError("Expected r to be Series or DataFrame")
+
+
+def annualized_volatility(returns: pd.Series, periods_per_year: int = 12) -> float:
+    # Check if the series is empty
+    if returns.empty:
+        raise ValueError("Series is empty")
+    # Calculate the standard deviation of the returns
+    std = returns.std()
+    # Return the annualized volatility
+    return std * np.sqrt(periods_per_year)
+
+
+def annualized_returns(returns: pd.Series, periods_per_year: int = 12) -> float:
+    """Annualized returns of a returns stream"""
+    # Check if the series is empty
+    if returns.empty:
+        raise ValueError("Series is empty")
+    # Calculate the compounded growth of the investment
+    compounded_growth = (1 + returns).prod()
+
+    # Calculate the number of periods
+    n_periods = returns.shape[0]
+
+    # Calculate the annualized rate of return
+    return (compounded_growth ** (periods_per_year / n_periods)) - 1
+
+
+def sharpe_ratio(
+    returns: pd.Series, risk_free_rate: float, periods_per_year: int = 12
+) -> float:
+    """Calculate the annualized Sharpe ratio of a returns stream"""
+
+    # Convert the annual risk free rate to a per period
+    rf_per_period = ((1 + risk_free_rate) ** (1 / periods_per_year)) - 1
+    # Calculate the excess returns
+    excess_returns = returns - rf_per_period
+    # Calculate the annualized excess returns
+    ann_excess_returns = annualized_returns(excess_returns, periods_per_year)
+    # Calculate the annualized volatility of the excess returns
+    ann_volatility = annualized_volatility(returns, periods_per_year)
+    # Calculate the Sharpe ratio
+    return ann_excess_returns / ann_volatility
