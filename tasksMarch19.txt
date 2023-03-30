@@ -1,2 +1,0 @@
-Binance Testnet
-Parameters -> Start, End, Performance, Comments

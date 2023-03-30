@@ -1,9 +1,0 @@
-Chapter 4 concepts: 
-1. Returns
-2. Metrics: Risk Premium(D)
-	    #Alpha(chapter 5)(D)
-	    Expected excess Return(D)
-	    Expected return(D)
-            Total Return
-	    Total Risk, SKip Value added part
-## Benchmark
