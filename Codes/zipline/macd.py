@@ -1,38 +1,39 @@
-from zipline.api import order_target, record, symbol
+from zipline.api import order_target, record, symbol, set_commission, order_percent
+import matplotlib.pyplot as plt
+import talib as ta
+from zipline.finance import commission
+
+# parameters ----
+SELECTED_STOCK = "BTC"
 
 
+# initialize the strategy
 def initialize(context):
-    context.i = 0
-    context.asset = symbol("AAPL")
+    context.time = 0
+    context.asset = symbol(SELECTED_STOCK)
+    context.set_commission(commission.PerShare(cost=0.0, min_trade_cost=0))
+    context.has_position = False
 
 
 def handle_data(context, data):
-    # Skip first 300 days to get full windows
-    context.i += 1
-    if context.i < 300:
+    context.time += 1
+    if context.time < 34:
         return
 
-    # Compute averages
-    # data.history() has to be called with the same params
-    # from above and returns a pandas dataframe.
-    short_mavg = data.history(
-        context.asset, "price", bar_count=100, frequency="1d"
-    ).mean()
-    long_mavg = data.history(
-        context.asset, "price", bar_count=300, frequency="1d"
-    ).mean()
+    price_history = data.history(context.asset, fields="price", bar_count=34, frequency="1d")
+    macd, macdsignal, macdhist = ta.MACD(price_history, 12, 26, 9)
 
-    # Trading logic
-    if short_mavg > long_mavg:
-        # order_target orders as many shares as needed to
-        # achieve the desired number of shares.
-        order_target(context.asset, 100)
-    elif short_mavg < long_mavg:
+    if (macdsignal[-1] < macd[-1]) and (not context.has_position):
+        order_percent(context.asset, 1.0)
+        context.has_position = True
+
+    if (macdsignal[-1] > macd[-1]) and (context.has_position):
         order_target(context.asset, 0)
+        context.has_position = False
 
-    # Save values for later inspection
     record(
-        AAPL=data.current(context.asset, "price"),
-        short_mavg=short_mavg,
-        long_mavg=long_mavg,
+        macd=macd[-1],
+        macdsignal=macdsignal[-1],
+        macdhist=macdhist[-1],
+        price=price_history[-1],
     )
